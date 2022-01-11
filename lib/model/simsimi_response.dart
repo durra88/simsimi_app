@@ -1,5 +1,3 @@
-
-
 class SimsimiResponse {
   int? status;
   String? statusMessage;
@@ -16,17 +14,17 @@ class SimsimiResponse {
     atext = json['atext'];
     lang = json['lang'];
     request =
-        json['request'] != null ? new Request.fromJson(json['request']) : null;
+        json['request'] != null ? Request.fromJson(json['request']) : null;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['status'] = this.status;
-    data['statusMessage'] = this.statusMessage;
-    data['atext'] = this.atext;
-    data['lang'] = this.lang;
-    if (this.request != null) {
-      data['request'] = this.request!.toJson();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['status'] = status;
+    data['statusMessage'] = statusMessage;
+    data['atext'] = atext;
+    data['lang'] = lang;
+    if (request != null) {
+      data['request'] = request!.toJson();
     }
     return data;
   }
@@ -44,9 +42,9 @@ class Request {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['utext'] = this.utext;
-    data['lang'] = this.lang;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['utext'] = utext;
+    data['lang'] = lang;
     return data;
   }
 }

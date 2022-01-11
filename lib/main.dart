@@ -100,33 +100,34 @@ class MyHomePage extends ConsumerWidget {
                       var userChatContent = _textEditingController.text;
                       _textEditingController.clear();
                       //!add chat to list
-                      context.read(messageListProvider).add(new MessageItem(
+                      context.read(messageListProvider).add(MessageItem(
                           message: userChatContent,
                           fromUser: true,
                           isTyping: false));
                       //!add jumping dots animation
-                      context.read(messageListProvider).add(new MessageItem(
+                      context.read(messageListProvider).add(MessageItem(
                           message: 'Typing...',
                           fromUser: true,
                           isTyping: true));
                       //!fetch Api
-                      var response = await getSimsimiResponse(userChatContent, 'en');
+                      var response =
+                          await getSimsimiResponse(userChatContent, 'en');
                       //!remove jumping after having response
                       context.read(messageListProvider).removeJumpingDots();
                       //Add Response
-                      context.read(messageListProvider).add(new MessageItem(
+                      context.read(messageListProvider).add(MessageItem(
                           message: response.toString(),
                           fromUser: false,
                           isTyping: false));
                       //!Auto scroll chat layout to the end
-                      Timer(Duration(milliseconds: 100), () {
+                      Timer(const Duration(milliseconds: 100), () {
                         _scrollController.animateTo(
                             _scrollController.position.maxScrollExtent,
-                            duration: Duration(milliseconds: 100),
+                            duration: const Duration(milliseconds: 100),
                             curve: Curves.easeOut);
                       });
                     },
-                    icon: Icon(Icons.send)),
+                    icon: const Icon(Icons.send)),
               ],
             )
           ],
