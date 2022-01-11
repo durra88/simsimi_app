@@ -1,107 +1,141 @@
+import 'dart:async';
+
+import 'package:bubble/bubble.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/All.dart';
+import 'package:progress_indicators/progress_indicators.dart';
+import 'package:simsimi_app/model/message_item.dart';
+import 'package:simsimi_app/network/network.dart';
+import 'package:simsimi_app/state/state_manager.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-       
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
+class MyHomePage extends ConsumerWidget {
+  TextEditingController _textEditingController = TextEditingController();
+  ScrollController _scrollController = ScrollController();
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+  Widget build(BuildContext context, ScopedReader watch) {
+    var list = watch(messageListProvider.state);
     return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      body: SafeArea(
+          child: Padding(
+        padding: EdgeInsets.all(16.0),
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
+          //!chat Content
+          children: [
+            Expanded(
+                child: ListView.builder(
+                    shrinkWrap: true,
+                    controller: _scrollController,
+                    itemCount: list.length,
+                    itemBuilder: (context, index) {
+                      return list[index].isTyping!
+                          ? Container(
+                              width: 50,
+                              height: 50,
+                              child: JumpingDotsProgressIndicator(
+                                fontSize: 40.0,
+                              ),
+                            )
+                          : list[index].fromUser!
+                              ? Bubble(
+                                  margin: const BubbleEdges.only(top: 10),
+                                  alignment: Alignment.topRight,
+                                  nip: BubbleNip.rightBottom,
+                                  color: Colors.black54,
+                                  child: Text(
+                                    '${list[index].message}',
+                                    style: TextStyle(color: Colors.white),
+                                    textAlign: TextAlign.right,
+                                  ),
+                                )
+                              : Row(
+                                  children: [
+                                    Image.asset(
+                                      'assets/images/simsimi.png',
+                                      width: 50,
+                                      height: 50,
+                                    ),
+                                    Bubble(
+                                      margin: const BubbleEdges.only(top: 10),
+                                      alignment: Alignment.topLeft,
+                                      nip: BubbleNip.leftBottom,
+                                      color: Colors.yellow,
+                                      child: Text(
+                                        '${list[index].message}',
+                                        style: TextStyle(color: Colors.black),
+                                        textAlign: TextAlign.left,
+                                      ),
+                                    )
+                                  ],
+                                );
+                    })),
+            //!chat layout
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(hintText: 'Enter your message'),
+                    controller: _textEditingController,
+                  ),
+                ),
+                IconButton(
+                    onPressed: () async {
+                      var userChatContent = _textEditingController.text;
+                      _textEditingController.clear();
+                      //!add chat to list
+                      context.read(messageListProvider).add(new MessageItem(
+                          message: userChatContent,
+                          fromUser: true,
+                          isTyping: false));
+                      //!add jumping dots animation
+                      context.read(messageListProvider).add(new MessageItem(
+                          message: 'Typing...',
+                          fromUser: true,
+                          isTyping: true));
+                      //!fetch Api
+                      var response = await getSimsimiResponse(userChatContent, 'en');
+                      //!remove jumping after having response
+                      context.read(messageListProvider).removeJumpingDots();
+                      //Add Response
+                      context.read(messageListProvider).add(new MessageItem(
+                          message: response.toString(),
+                          fromUser: false,
+                          isTyping: false));
+                      //!Auto scroll chat layout to the end
+                      Timer(Duration(milliseconds: 100), () {
+                        _scrollController.animateTo(
+                            _scrollController.position.maxScrollExtent,
+                            duration: Duration(milliseconds: 100),
+                            curve: Curves.easeOut);
+                      });
+                    },
+                    icon: Icon(Icons.send)),
+              ],
+            )
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      )),
     );
+  }
+
+  Future<String> getSimsimiResponse(String userChatContent, String lang) async {
+    return await fetchSimsimiAPI(userChatContent, lang);
   }
 }
